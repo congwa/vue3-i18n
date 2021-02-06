@@ -3,7 +3,7 @@ import { I18nInstance, Messages, I18nConfig } from "./types";
 
 export const i18nSymbol = Symbol("i18n");
 
-const recursiveRetrieve = (chain: string[], messages: Messages): string => {
+const recursiveRetrieve = (chain: string[], messages: Messages, obj:any): string => {
   const key = chain[0];
   if (~key.indexOf("[")) {
     // get array item
@@ -23,7 +23,7 @@ const recursiveRetrieve = (chain: string[], messages: Messages): string => {
           ? messages[okey][num]
           : "";
       } else {
-        return recursiveRetrieve(chain.slice(1), messages[okey][num]);
+        return recursiveRetrieve(chain.slice(1), messages[okey][num], obj);
       }
     } else {
       throw new Error(`Not Found: ${key}`);
@@ -32,9 +32,14 @@ const recursiveRetrieve = (chain: string[], messages: Messages): string => {
     if (!messages[chain[0]] && messages[chain[0]] !== "") {
       throw new Error("Not Found");
     } else if (chain.length === 1) {
-      return typeof messages[chain[0]] === "string" ? messages[chain[0]] : "";
+      // return typeof messages[chain[0]] === "string" ? messages[chain[0]] : "";
+      let str = messages[chain[0]].replace(/%{num}/, obj.num).replace(/%{msg}/, obj.msg);
+      if(str.includes('qiangdiao')) {
+        str = `<div>${str}</div>`
+      }
+      return str;
     } else {
-      return recursiveRetrieve(chain.slice(1), messages[chain[0]]);
+      return recursiveRetrieve(chain.slice(1), messages[chain[0]], obj);
     }
   }
 };
@@ -42,14 +47,14 @@ const recursiveRetrieve = (chain: string[], messages: Messages): string => {
 export const createI18n = (config: I18nConfig): I18nInstance => {
   const locale = ref(config.locale || "en");
   const messages = config.messages;
-  const t = (key: string) => {
+  const t = (key: string, obj:any): string => {
     const pack = messages[locale.value] || messages.en;
     if (typeof key !== "string") {
       console.warn("Warn(i18n):", "keypath must be a type of string");
       return "";
     }
     try {
-      return recursiveRetrieve(key.split("."), pack);
+      return recursiveRetrieve(key.split("."), pack, obj);
     } catch (error) {
       console.warn(`Warn(i18n): the keypath '${key}' not found`);
       return "";
